@@ -1,0 +1,1509 @@
+Microsoft (R) Macro Assembler Version 12.00.21005.1	    05/20/20 00:25:16
+MY COAL PROJEC						     Page 1 - 1
+
+
+				TITLE MY COAL PROJECT
+				INCLUDE Irvine32.inc
+			      C ; Include file for Irvine32.lib             (Irvine32.inc)
+			      C 
+			      C ;OPTION CASEMAP:NONE		; optional: make identifiers case-sensitive
+			      C 
+			      C INCLUDE SmallWin.inc		; MS-Windows prototypes, structures, and constants
+			      C .NOLIST
+			      C .LIST
+			      C 
+			      C INCLUDE VirtualKeys.inc
+			      C ; VirtualKeys.inc
+			      C .NOLIST
+			      C .LIST
+			      C 
+			      C 
+			      C .NOLIST
+			      C .LIST
+			      C 
+				;----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+				NoFile PROTO, fileName:PTR BYTE
+				storeNoEmotionWord PROTO, noEmotionWord:PTR BYTE, noEmotionWordSize:DWORD
+				countEmotions PROTO,NoOfEmotions:DWORD
+				wordFind PROTO, src: ptr byte, key: ptr byte, strSize: dword, keySize: dword
+				printEmotion PROTO, EmotionWord:PTR BYTE, EmotionWordSize:DWORD
+				printFoundWord PROTO, foundWord:PTR BYTE
+				clear PROTO, textString:PTR BYTE, StringLength:DWORD
+				extracted_Word PROTO
+				;---------------------------------------------------------------------------------------------------- DATA BLOCK -------------------------------------------------------------------------------------------------------------
+
+ 00000000			.data
+
+ 00000000 00002710		EmotionStringSize DWORD 10000
+ 00000004  00002710 [		EmotionString BYTE 10000 dup(0)
+	    00
+	   ]
+ 00002714  00000006 [		EmotionCount BYTE 6 DUP(?)
+	    00
+	   ]
+ 0000271A 00			EC BYTE ?
+ 0000271B FF			largest SBYTE -1
+ 0000271C 00000000		position DWORD ?
+
+ 00002720 48 61 70 70 79	FileNames byte  "Happy.txt",0,0,0,0,0,0,0,0,0,0,0
+	   2E 74 78 74 00
+	   00 00 00 00 00
+	   00 00 00 00 00
+ 00002734  53 61 64 2E 74			  byte  "Sad.txt",0,0,0,0,0,0,0,0,0,0,0,0,0
+	   78 74 00 00 00
+	   00 00 00 00 00
+	   00 00 00 00 00
+ 00002748  41 6E 67 65 72			  byte  "Anger.txt",0,0,0,0,0,0,0,0,0,0,0
+	   2E 74 78 74 00
+	   00 00 00 00 00
+	   00 00 00 00 00
+ 0000275C  44 69 73 67 75			  byte  "Disgust.txt",0,0,0,0,0,0,0,0,0
+	   73 74 2E 74 78
+	   74 00 00 00 00
+	   00 00 00 00 00
+ 00002770  46 65 61 72 2E			  byte  "Fear.txt",0,0,0,0,0,0,0,0,0,0,0,0
+	   74 78 74 00 00
+	   00 00 00 00 00
+	   00 00 00 00 00
+ 00002784  4E 6F 6E 65 2E			  byte  "None.txt",0,0,0,0,0,0,0,0,0,0,0
+	   74 78 74 00 00
+	   00 00 00 00 00
+	   00 00 00 00
+
+ 00002797 00000006		EmotionNum DWORD 6
+ 0000279B 00000190		EmotionLength DWORD 400
+ 0000279F 00000000		TempFileNames DWORD  ?
+
+ 000027A3 00000000		EmotionfileHandler DWORD 0
+
+ 000027A7 49 6E 70 75 74	inputFile BYTE "Input.txt",0
+	   2E 74 78 74 00
+ 000027B1  00004E20 [		inputString BYTE 20000 dup(0)
+	    00
+	   ]
+ 000075D1 00000000		inputFileHandler DWORD 0
+ 000075D5 000027B1 R		currentInputIndex DWORD offset inputString  
+ 000075D9  00000190 [		extractedWord BYTE 400 dup(0)
+	    00
+	   ]
+ 00007769 00000000		extractedWordSize DWORD 0
+
+ 0000776D  00004E20 [		EmotionWordsCount BYTE  20000 dup(0)
+	    00
+	   ]
+ 0000C58D 0000776D R		IndexNoEmotionWords DWORD offset EmotionWordsCount
+
+ 0000C591  00000028 [		lineOut	BYTE 40 dup(?)
+	    00
+	   ]
+ 0000C5B9  00000028 [		uword byte 40 dup(?)
+	    00
+	   ]
+
+
+				;//loop counters
+ 0000C5E1 00004E20		mainLoopCounter DWORD 20000
+ 0000C5E5 00			world_len byte ?
+
+
+				;//flags
+ 0000C5E6 00000000		inputFileEnded DWORD 0
+ 0000C5EA 00000000		fileEmotionWritten DWORD 0
+ 0000C5EE 00000000		lastWord DWORD 0
+
+
+				;//Strings to be used
+ 0000C5F2 3A 00			semiColon BYTE ":",0
+ 0000C5F4 2E			dot BYTE "."
+ 0000C5F5 20 20 20 20 20	bigSpace BYTE "       ",0
+	   20 20 00
+ 0000C5FD 0D 0A			new_line byte 0Dh,0Ah
+
+
+				;//prompts
+ 0000C5FF 45 6E 74 65 72	promptEnter byte "Enter text for identifying expressions of emotion: ",0
+	   20 74 65 78 74
+	   20 66 6F 72 20
+	   69 64 65 6E 74
+	   69 66 79 69 6E
+	   67 20 65 78 70
+	   72 65 73 73 69
+	   6F 6E 73 20 6F
+	   66 20 65 6D 6F
+	   74 69 6F 6E 3A
+	   20 00
+ 0000C633 73 65 6E 74 65	promptDisplay byte "sentence entered",0 
+	   6E 63 65 20 65
+	   6E 74 65 72 65
+	   64 00
+ 0000C644 46 69 6C 65 20	promptFile1 BYTE "File '",0
+	   27 00
+ 0000C64B 27 20 64 6F 65	promptFile2 BYTE "' does not exist or cannot be opened.",0
+	   73 20 6E 6F 74
+	   20 65 78 69 73
+	   74 20 6F 72 20
+	   63 61 6E 6E 6F
+	   74 20 62 65 20
+	   6F 70 65 6E 65
+	   64 2E 00
+ 0000C671 54 68 65 20 69	promptNoDot BYTE "The is no '.' terminator in the input. '.' determines the end of input. Exiting the program.",0
+	   73 20 6E 6F 20
+	   27 2E 27 20 74
+	   65 72 6D 69 6E
+	   61 74 6F 72 20
+	   69 6E 20 74 68
+	   65 20 69 6E 70
+	   75 74 2E 20 27
+	   2E 27 20 64 65
+	   74 65 72 6D 69
+	   6E 65 73 20 74
+	   68 65 20 65 6E
+	   64 20 6F 66 20
+	   69 6E 70 75 74
+	   2E 20 45 78 69
+	   74 69 6E 67 20
+	   74 68 65 20 70
+	   72 6F 67 72 61
+	   6D 2E 00
+ 0000C6CE 59 6F 75 72 20	promptHappy BYTE "Your entered sentence suggests that you posses HAPPY emotion :)",0
+	   65 6E 74 65 72
+	   65 64 20 73 65
+	   6E 74 65 6E 63
+	   65 20 73 75 67
+	   67 65 73 74 73
+	   20 74 68 61 74
+	   20 79 6F 75 20
+	   70 6F 73 73 65
+	   73 20 48 41 50
+	   50 59 20 65 6D
+	   6F 74 69 6F 6E
+	   20 3A 29 00
+ 0000C70E 59 6F 75 72 20	promptSad BYTE "Your entered sentence suggests that you posses SAD emotion :(",0
+	   65 6E 74 65 72
+	   65 64 20 73 65
+	   6E 74 65 6E 63
+	   65 20 73 75 67
+	   67 65 73 74 73
+	   20 74 68 61 74
+	   20 79 6F 75 20
+	   70 6F 73 73 65
+	   73 20 53 41 44
+	   20 65 6D 6F 74
+	   69 6F 6E 20 3A
+	   28 00
+ 0000C74C 59 6F 75 72 20	promptAnger BYTE "Your entered sentence suggests that you posses ANGER emotion :()",0
+	   65 6E 74 65 72
+	   65 64 20 73 65
+	   6E 74 65 6E 63
+	   65 20 73 75 67
+	   67 65 73 74 73
+	   20 74 68 61 74
+	   20 79 6F 75 20
+	   70 6F 73 73 65
+	   73 20 41 4E 47
+	   45 52 20 65 6D
+	   6F 74 69 6F 6E
+	   20 3A 28 29 00
+ 0000C78D 59 6F 75 72 20	promptDisgust BYTE "Your entered sentence suggests that you posses DISGUST emotion :)(",0
+	   65 6E 74 65 72
+	   65 64 20 73 65
+	   6E 74 65 6E 63
+	   65 20 73 75 67
+	   67 65 73 74 73
+	   20 74 68 61 74
+	   20 79 6F 75 20
+	   70 6F 73 73 65
+	   73 20 44 49 53
+	   47 55 53 54 20
+	   65 6D 6F 74 69
+	   6F 6E 20 3A 29
+	   28 00
+ 0000C7D0 59 6F 75 72 20	promptFear BYTE "Your entered sentence suggests that you posses FEAR emotion :!)",0
+	   65 6E 74 65 72
+	   65 64 20 73 65
+	   6E 74 65 6E 63
+	   65 20 73 75 67
+	   67 65 73 74 73
+	   20 74 68 61 74
+	   20 79 6F 75 20
+	   70 6F 73 73 65
+	   73 20 46 45 41
+	   52 20 65 6D 6F
+	   74 69 6F 6E 20
+	   3A 21 29 00
+ 0000C810 59 6F 75 72 20	promptMixed BYTE "Your entered sentence suggests that you posses MIXED emotion :)",0
+	   65 6E 74 65 72
+	   65 64 20 73 65
+	   6E 74 65 6E 63
+	   65 20 73 75 67
+	   67 65 73 74 73
+	   20 74 68 61 74
+	   20 79 6F 75 20
+	   70 6F 73 73 65
+	   73 20 4D 49 58
+	   45 44 20 65 6D
+	   6F 74 69 6F 6E
+	   20 3A 29 00
+ 0000C850 59 6F 75 72 20	promptNone BYTE "Your entered sentence suggests that you posses NO emotion :0 OR it might be NEGATION of the analysis made by the program",0
+	   65 6E 74 65 72
+	   65 64 20 73 65
+	   6E 74 65 6E 63
+	   65 20 73 75 67
+	   67 65 73 74 73
+	   20 74 68 61 74
+	   20 79 6F 75 20
+	   70 6F 73 73 65
+	   73 20 4E 4F 20
+	   65 6D 6F 74 69
+	   6F 6E 20 3A 30
+	   20 4F 52 20 69
+	   74 20 6D 69 67
+	   68 74 20 62 65
+	   20 4E 45 47 41
+	   54 49 4F 4E 20
+	   6F 66 20 74 68
+	   65 20 61 6E 61
+	   6C 79 73 69 73
+	   20 6D 61 64 65
+	   20 62 79 20 74
+	   68 65 20 70 72
+	   6F 67 72 61 6D
+	   00
+ 0000C8C9 20 20 20 20 20	welcome BYTE "                                              WELCOME TO TEXT EMOTIONS IDENTIFIER",0
+	   20 20 20 20 20
+	   20 20 20 20 20
+	   20 20 20 20 20
+	   20 20 20 20 20
+	   20 20 20 20 20
+	   20 20 20 20 20
+	   20 20 20 20 20
+	   20 20 20 20 20
+	   20 57 45 4C 43
+	   4F 4D 45 20 54
+	   4F 20 54 45 58
+	   54 20 45 4D 4F
+	   54 49 4F 4E 53
+	   20 49 44 45 4E
+	   54 49 46 49 45
+	   52 00
+ 0000C91B 2D 2D 2D 2D 2D	dotline BYTE "---------------------------------------------------------------------------------------------------------------------------",0
+	   2D 2D 2D 2D 2D
+	   2D 2D 2D 2D 2D
+	   2D 2D 2D 2D 2D
+	   2D 2D 2D 2D 2D
+	   2D 2D 2D 2D 2D
+	   2D 2D 2D 2D 2D
+	   2D 2D 2D 2D 2D
+	   2D 2D 2D 2D 2D
+	   2D 2D 2D 2D 2D
+	   2D 2D 2D 2D 2D
+	   2D 2D 2D 2D 2D
+	   2D 2D 2D 2D 2D
+	   2D 2D 2D 2D 2D
+	   2D 2D 2D 2D 2D
+	   2D 2D 2D 2D 2D
+	   2D 2D 2D 2D 2D
+	   2D 2D 2D 2D 2D
+	   2D 2D 2D 2D 2D
+	   2D 2D 2D 2D 2D
+	   2D 2D 2D 2D 2D
+	   2D 2D 2D 2D 2D
+	   2D 2D 2D 2D 2D
+	   2D 2D 2D 2D 2D
+	   2D 2D 2D 00
+ 0000C997 44 49 53 43 4C	disclaimer BYTE "DISCLAIMER--> This disclaimer informs users that the analysis expressed through the project belong not necessarily to any individual.",0
+	   41 49 4D 45 52
+	   2D 2D 3E 20 54
+	   68 69 73 20 64
+	   69 73 63 6C 61
+	   69 6D 65 72 20
+	   69 6E 66 6F 72
+	   6D 73 20 75 73
+	   65 72 73 20 74
+	   68 61 74 20 74
+	   68 65 20 61 6E
+	   61 6C 79 73 69
+	   73 20 65 78 70
+	   72 65 73 73 65
+	   64 20 74 68 72
+	   6F 75 67 68 20
+	   74 68 65 20 70
+	   72 6F 6A 65 63
+	   74 20 62 65 6C
+	   6F 6E 67 20 6E
+	   6F 74 20 6E 65
+	   63 65 73 73 61
+	   72 69 6C 79 20
+	   74 6F 20 61 6E
+	   79 20 69 6E 64
+	   69 76 69 64 75
+	   61 6C 2E 00
+ = 0000005F			BlueTextOnMagenta = white + (magenta * 16)
+ = 000000F5			DefaultColor = magenta + (white * 16)
+
+				;-------------------------------------------------------------------------------------------------------- CODE BLOCK ---------------------------------------------------------------------------------------------------------
+ 00000000			.code
+
+ 00000000			main PROC
+				;--------------------------------------------------------------------------------------------------------- DISPLAY -----------------------------------------------------------------------------------------------------------
+
+ 00000000  B8 0000005F		mov eax, BlueTextOnMagenta
+ 00000005  E8 00000000 E	call SetTextColor
+ 0000000A  E8 00000000 E	call Clrscr
+ 0000000F  BA 0000C91B R	mov edx,offset dotline
+ 00000014  E8 00000000 E	call writeString
+ 00000019  E8 00000000 E	call crlf
+ 0000001E  BA 0000C8C9 R	mov edx,offset welcome
+ 00000023  E8 00000000 E	call writeString
+ 00000028  E8 00000000 E	call crlf
+ 0000002D  E8 00000000 E	call crlf
+ 00000032  BA 0000C91B R	mov edx,offset dotline
+ 00000037  E8 00000000 E	call writeString
+ 0000003C  E8 00000000 E	call crlf
+ 00000041  BA 0000C997 R	mov edx,offset disclaimer
+ 00000046  E8 00000000 E	call writeString
+ 0000004B  E8 00000000 E	call crlf
+
+				;----------------------------------------------------------------------------------------------- PROMPTS TO TAKE USER'S INPUT -----------------------------------------------------------------------------------------------
+
+ 00000050  E8 00000000 E	call crlf
+ 00000055  BA 0000C5FF R	mov edx,offset promptEnter
+ 0000005A  E8 00000000 E	call writestring
+ 0000005F  E8 00000000 E	call crlf
+ 00000064  BA 00000000		mov edx,0
+ 00000069  BA 000027B1 R	mov edx,offset inputString
+ 0000006E  B9 00004E20		mov ecx,lengthof inputString
+ 00000073  E8 00000000 E	call readstring
+ 00000078  E8 00000000 E	call crlf
+
+				;----------------------------------------------------------------------------------------- CONVERTING UPPERCASE STRING TO LOWERCASE -----------------------------------------------------------------------------------------
+				
+ 0000007D  BE 000027B1 R	mov esi,offset inputString
+ 00000082  B9 00004E20		mov ecx,lengthof inputString
+ 00000087			lop:
+ 00000087  8A 06			mov al,[esi]
+ 00000089  3C 41			cmp al,65
+ 0000008B  72 0C			jb nx
+ 0000008D  3C 00			cmp al,0
+ 0000008F  74 1F			je comp
+ 00000091  3C 5A			cmp al,90
+ 00000093  77 04			ja nx
+ 00000095  04 20			add al,32
+ 00000097  88 06			mov [esi],al
+ 00000099				nx:	
+ 00000099  46					inc esi
+ 0000009A  E2 EB				loop lop
+
+				;----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+ 0000009C  BA 00000000		mov edx,0
+ 000000A1  BA 0000C633 R	mov edx,offset promptDisplay
+ 000000A6  E8 00000000 E	call writestring
+ 000000AB  E8 00000000 E	call crlf
+ 000000B0			comp:
+ 000000B0  BA 000027B1 R	mov edx,offset inputString
+ 000000B5  E8 00000000 E	call writestring
+ 000000BA  E8 00000000 E	call crlf
+ 000000BF  E8 00000000 E	call crlf
+
+				;------------------------------------------------------------------------------------------------- WRITING INPUT TO THE FILE ------------------------------------------------------------------------------------------------
+
+ 000000C4  BA 00000000		mov edx,0
+ 000000C9  B8 00000000		mov eax,0
+ 000000CE  BA 000027A7 R	mov edx, offset inputFile
+ 000000D3  E8 00000000 E	call CreateOutputFile
+ 000000D8  A2 0000C591 R	mov lineout, al
+ 000000DD  BE 000027B1 R	mov esi,offset inputString
+ 000000E2  B9 00004E20		mov ecx,lengthof inputString
+ 000000E7  BF 0000C5B9 R	mov edi,offset uword
+ 000000EC  E8 00000000 E	call crlf
+ 000000F1			l1:
+ 000000F1  AC				lodsb
+ 000000F2  3C 00			cmp al,0
+ 000000F4  0F 84 00000087		je q
+ 000000FA  3C 20			cmp al," "
+ 000000FC  74 03			je done
+ 000000FE  AA				stosb
+ 000000FF  E2 F0			loop l1
+ 00000101			done:
+ 00000101  C6 05 0000C5E5 R		mov world_len,0
+	   00
+ 00000108  BA 0000C5B9 R		mov edx,offset uword
+ 0000010D  E8 00000000 E		call writestring
+ 00000112  8A D9			mov bl,cl
+ 00000114  B9 00000028			mov ecx,lengthof uword
+ 00000119  BF 0000C5B9 R		mov edi,offset uword
+ 0000011E				x:
+ 0000011E  8A 3F				mov bh,[edi]
+ 00000120  80 FF 00				cmp bh,0
+ 00000123  74 09				je d
+ 00000125  FE 05 0000C5E5 R			inc world_len
+ 0000012B  47					inc edi
+ 0000012C  E2 F0				loop x
+ 0000012E				d:
+ 0000012E  0F B6 05				movzx eax,lineout
+	   0000C591 R
+ 00000135  BA 0000C5B9 R			mov edx, OFFSET uword
+ 0000013A  0F B6 0D				movzx ecx,world_len
+	   0000C5E5 R
+ 00000141  E8 00000000 E			call WriteToFile
+ 00000146  8D 15 0000C5FD R			lea edx,new_line
+ 0000014C  0F B6 05				movzx eax,lineout
+	   0000C591 R
+ 00000153  B9 00000002				mov ecx, 2
+ 00000158  E8 00000000 E			call WriteToFile
+ 0000015D  0F B6 0D				movzx ecx,world_len
+	   0000C5E5 R
+ 00000164  BF 0000C5B9 R			mov edi,offset uword
+ 00000169				y:
+ 00000169  B7 00				mov bh,0
+ 0000016B  88 3F				mov [edi],bh
+ 0000016D  47					inc edi
+ 0000016E  E2 F9				loop y
+ 00000170  8A CB			mov cl,bl
+ 00000172  BF 0000C5B9 R		mov edi,offset uword
+ 00000177  E8 00000000 E		call crlf
+ 0000017C  E9 FFFFFF70			jmp l1
+ 00000181			q:
+ 00000181  C6 05 0000C5E5 R		mov world_len,0
+	   00
+ 00000188  BA 0000C5B9 R		mov edx,offset uword
+ 0000018D  E8 00000000 E		call writestring
+ 00000192  E8 00000000 E		call crlf
+ 00000197  8A D9			mov bl,cl
+ 00000199  B9 00000028			mov ecx,lengthof uword
+ 0000019E  BF 0000C5B9 R		mov edi,offset uword
+ 000001A3				a:
+ 000001A3  8A 3F				mov bh,[edi]
+ 000001A5  80 FF 00				cmp bh,0
+ 000001A8  74 09				je b
+ 000001AA  FE 05 0000C5E5 R			inc world_len
+ 000001B0  47					inc edi
+ 000001B1  E2 F0				loop a
+ 000001B3				b:
+ 000001B3  0F B6 05				movzx eax,lineout
+	   0000C591 R
+ 000001BA  0F B6 0D				movzx ecx,world_len
+	   0000C5E5 R
+ 000001C1  BA 0000C5B9 R			mov edx, OFFSET uword
+ 000001C6  E8 00000000 E			call WriteToFile
+ 000001CB  8D 15 0000C5FD R			lea edx,new_line
+ 000001D1  0F B6 05				movzx eax,lineout
+	   0000C591 R
+ 000001D8  B9 00000002				mov ecx, 2
+ 000001DD  E8 00000000 E			call WriteToFile
+ 000001E2  0F B6 05				movzx eax,lineout
+	   0000C591 R
+ 000001E9  BA 0000C5F4 R			mov edx, OFFSET dot
+ 000001EE  B9 00000001				mov ecx,1
+ 000001F3  E8 00000000 E			call WriteToFile
+ 000001F8  BF 0000C5B9 R			mov edi,offset uword
+ 000001FD  0F B6 0D				movzx ecx,world_len
+	   0000C5E5 R
+ 00000204				z:
+ 00000204  B7 00				mov bh,0
+ 00000206  88 3F				mov [edi],bh
+ 00000208  47					inc edi
+ 00000209  E2 F9				loop z
+ 0000020B  0F B6 05		movzx eax, lineout
+	   0000C591 R
+ 00000212  E8 00000000 E	call CloseFile
+
+				;-------------------------------------------------------------------------------------- READING FROM THE FILE "input.txt" TO inputString ------------------------------------------------------------------------------------- 
+
+ 00000217  B8 0000776D R	mov eax, offset EmotionWordsCount
+ 0000021C  A3 0000C58D R	mov IndexNoEmotionWords, eax      
+
+ 00000221  BA 000027A7 R	mov edx, offset inputFile
+
+ 00000226  E8 00000000 E	call openInputFile
+ 0000022B  A3 000075D1 R	mov inputFilehandler, eax
+
+ 00000230  83 F8 FF		cmp eax, INVALID_HANDLE_VALUE
+ 00000233  0F 84 00000166	je InputFileNotExist
+
+
+ 00000239  B9 00004E20		mov ecx, lengthOf inputString
+ 0000023E  BA 000027B1 R	mov edx, offset inputString
+ 00000243  A1 000075D1 R	mov eax, inputfilehandler
+ 00000248  E8 00000000 E	call readFromFile
+				;call writeString
+
+
+				;------------------------------------------------------------------------------------------- FILE TEXT MOVED TO inputString---------------------------------------------------------------------------------------------------
+
+
+				;----------------------------------------------------------------------------------------------- CHECKING FILE'S FORMAT ------------------------------------------------------------------------------------------------------
+
+
+				INVOKE wordFind, addr inputString, addr dot, lengthof inputString, lengthof dot
+
+				;-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 00000263  83 FB FF		cmp ebx,-1
+ 00000266  0F 84 0000011D	je noInputFormat
+ 0000026C  BB 00000000		mov ebx,0
+
+
+ 00000271  C7 05 0000279F R	mov TempFileNames, offset FileNames
+	   00002720 R
+ 0000027B  8B 0D 00002797 R	mov ecx,EmotionNum
+ 00000281			OuterLoop:
+
+ 00000281  89 0D 00002797 R				mov EmotionNum, ecx
+
+							;Setting flags to zero
+ 00000287  B8 00000000					mov eax, 0
+ 0000028C  A3 0000C5EA R				mov fileEmotionWritten, eax
+ 00000291  A3 0000C5EE R				mov lastWord, eax
+ 00000296  A3 0000C5E6 R				mov inputFileEnded, eax
+
+							;Resetting currentInputIndex
+ 0000029B  BE 000027B1 R				mov esi, offset inputString
+ 000002A0  89 35 000075D5 R				mov currentInputIndex, esi 
+
+				 
+							INVOKE clear, offset EmotionString, EmotionStringSize
+
+ 000002B6  8B 15 0000279F R				mov edx, TempFileNames
+ 000002BC  E8 00000000 E				call openInputFile
+ 000002C1  A3 000027A3 R				mov EmotionfileHandler, eax
+
+ 000002C6  83 F8 FF					cmp eax, INVALID_HANDLE_VALUE
+ 000002C9  0F 84 00000096				je FileNotExist
+
+
+ 000002CF  B9 00002710					mov ecx, lengthOf EmotionString
+ 000002D4  BA 00000004 R				mov edx, offset EmotionString
+ 000002D9  A1 000027A3 R				mov eax, EmotionfileHandler
+ 000002DE  E8 00000000 E				call readFromFile
+							;reading completed, text moved to categoryString
+						
+
+
+ 000002E3  8B 0D 0000C5E1 R				mov ecx, mainLoopCounter
+ 000002E9						innerLoop:
+ 000002E9  89 0D 0000C5E1 R						mov mainLoopCounter, ecx
+ 000002EF  A1 0000C5E6 R						mov eax, inputFileEnded
+ 000002F4  83 F8 00							cmp eax, 0
+ 000002F7  75 65							jne breakLoopCateg2
+
+ 000002F9  E8 00000218							call extracted_Word
+
+									INVOKE wordFind, addr EmotionString, addr extractedWord, EmotionStringSize, extractedWordSize
+					
+ 00000319  83 FB FF							cmp ebx, -1
+ 0000031C  74 38							je loopEnd
+									
+ 0000031E  A1 0000C5EA R						mov eax, fileEmotionWritten
+ 00000323  83 F8 00							cmp eax, 0
+ 00000326  75 11							jne alreadyPrintedCateg2
+									INVOKE printEmotion, TempFileNames, EmotionLength	
+
+ 00000339						alreadyPrintedCateg2:
+									 INVOKE printFoundWord, offset extractedWord
+ 00000343  88 0D 0000271A R						 mov EC,cl
+									 INVOKE countEmotions,EmotionNum
+
+ 00000354  EB 00					jmp loopEnd
+									
+ 00000356			loopEnd:
+									;//restoring ecx after a function call
+ 00000356  8B 0D 0000C5E1 R						mov ecx, mainLoopCounter
+ 0000035C  E2 8B					loop Innerloop
+
+ 0000035E						breakLoopCateg2:
+ 0000035E  E8 00000000 E				call crlf
+							
+					
+
+							
+ 00000363  EB 0B					jmp skipThis
+ 00000365			FileNotExist:
+							INVOKE NoFile, tempFileNames
+ 00000370			skipThis:
+
+ 00000370  83 05 0000279F R				add TempFileNames,20
+	   14
+ 00000377  8B 0D 00002797 R				mov ecx,EmotionNum
+ 0000037D  49						dec ecx
+ 0000037E  83 F9 00					cmp ecx, 0
+ 00000381  0F 85 FFFFFEFA	jnz outerLoop
+
+
+
+				;-------------------------------------------------------------------------------------------------- PROMPTS REGARDING INPUT --------------------------------------------------------------------------------------------------
+ 00000387  EB 20		jmp skipDownStatement
+ 00000389			noInputFormat:
+ 00000389  E8 00000000 E		call crlf
+ 0000038E  BA 0000C671 R		mov edx, offset promptNoDot
+ 00000393  E8 00000000 E		call writeString
+ 00000398  E8 00000000 E		call crlf
+
+ 0000039D  EB 0A		jmp skipDownStatement
+
+ 0000039F			InputFileNotExist:
+					INVOKE NoFile, addr inputFile
+
+ 000003A9			skipDownStatement:
+
+ 000003A9  A0 0000776D R	mov al, EmotionWordsCount[0]
+ 000003AE  3C 00		cmp al, 0
+				;je exitTheProgram
+
+				;-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+ 000003B0  B9 00000006		mov ecx,lengthOf EmotionCount
+ 000003B5  BE 00000000		mov esi,0
+ 000003BA			LEC:
+ 000003BA  8A 86 00002714 R		mov al,EmotionCount[esi]
+ 000003C0  3A 05 0000271B R		cmp al,largest
+ 000003C6  7F 02			jg storeLargest
+ 000003C8  EB 0D			jmp next
+
+ 000003CA				storeLargest:
+ 000003CA  A2 0000271B R					mov largest,al
+ 000003CF  89 35 0000271C R					mov position,esi
+ 000003D5  EB 00						jmp next
+
+ 000003D7				next:
+ 000003D7  46					 inc esi
+ 000003D8  E2 E0		Loop LEC
+
+ 000003DA  B8 00000000		mov eax,0	  
+ 000003DF  A1 0000271C R	mov eax,position
+ 000003E4  83 F8 05		cmp eax,5
+ 000003E7  74 19		je pHappy
+ 000003E9  83 F8 04		cmp eax,4
+ 000003EC  74 25		je pSad
+ 000003EE  83 F8 03		cmp eax,3
+ 000003F1  74 31		je pAnger
+ 000003F3  83 F8 02		cmp eax,2
+ 000003F6  74 3D		je pDisgust
+ 000003F8  83 F8 01		cmp eax,1
+ 000003FB  74 49		je pFear
+ 000003FD  83 F8 00		cmp eax,0
+ 00000400  74 55		je pNone
+
+ 00000402			pHappy:
+ 00000402  BA 0000C6CE R			mov edx,OFFSET promptHappy
+ 00000407  E8 00000000 E			call writeString
+ 0000040C  E8 00000000 E			call crlf
+ 00000411  EB 55				jmp conclude
+
+ 00000413			pSad:
+ 00000413  BA 0000C70E R	      mov edx,OFFSET promptSad
+ 00000418  E8 00000000 E		  call writeString
+ 0000041D  E8 00000000 E		  call crlf
+ 00000422  EB 44			  jmp conclude
+
+ 00000424			pAnger:
+ 00000424  BA 0000C74C R	        mov edx,OFFSET promptAnger
+ 00000429  E8 00000000 E		    call writeString
+ 0000042E  E8 00000000 E		    call crlf
+ 00000433  EB 33			    jmp conclude
+
+ 00000435			pDisgust:
+ 00000435  BA 0000C78D R	         mov edx,OFFSET promptDisgust
+ 0000043A  E8 00000000 E		     call writeString
+ 0000043F  E8 00000000 E		     call crlf
+ 00000444  EB 22			     jmp conclude
+
+ 00000446			pFear:
+ 00000446  BA 0000C7D0 R		   mov edx,OFFSET promptFear
+ 0000044B  E8 00000000 E		   call writeString
+ 00000450  E8 00000000 E		   call crlf
+ 00000455  EB 11			   jmp conclude
+
+ 00000457			pNone:
+ 00000457  BA 0000C850 R		   mov edx,OFFSET promptNone
+ 0000045C  E8 00000000 E		   call writeString
+ 00000461  E8 00000000 E		   call crlf
+ 00000466  EB 00			   jmp conclude	   
+
+ 00000468			conclude:
+				exit
+ 0000046F			main ENDP 
+				;-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+ 0000046F			NoFile PROC, fileName:PTR BYTE
+
+ 00000472  E8 00000000 E	call crlf
+ 00000477  E8 00000000 E	call crlf
+ 0000047C  BA 0000C644 R	mov edx, offset promptFile1
+ 00000481  E8 00000000 E	call writeString
+ 00000486  8B 55 08		mov edx, fileName
+ 00000489  E8 00000000 E	call writeString
+ 0000048E  BA 0000C64B R	mov edx, offset promptFile2
+ 00000493  E8 00000000 E	call writeString
+ 00000498  E8 00000000 E	call crlf
+ 0000049D  E8 00000000 E	call crlf
+
+				ret
+ 000004A6			NoFile ENDP
+
+				;-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+ 000004A6			clear PROC, textString:PTR BYTE, StringLength:DWORD
+
+ 000004A9  8B 7D 08		mov edi, textString
+ 000004AC  B8 00000000		mov eax, 0
+ 000004B1  8B 4D 0C		mov ecx, stringLength
+ 000004B4  F3/ AA		rep stosb
+
+				ret
+ 000004BA			clear ENDP
+
+				;-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 000004BA			printFoundWord PROC, foundWord:PTR BYTE
+
+ 000004BD  FF 45 08		inc foundword
+ 000004C0  8B 55 08		mov edx, foundword
+ 000004C3  E8 00000000 E	call writeString
+
+				ret
+ 000004CC			printFoundWord ENDP
+
+				;-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+ 000004CC			printEmotion PROC, EmotionWord:PTR BYTE, EmotionWordSize:DWORD
+
+ 000004CF  8B 75 08		mov esi, EmotionWord
+ 000004D2  8B 4D 0C		mov ecx, EmotionWordSize
+ 000004D5  B8 00000000		mov eax,0
+ 000004DA  A3 0000C5EA R	mov fileEmotionWritten, eax
+
+ 000004DF			loopPrintCategName:
+ 000004DF  8A 06						mov al, [esi]
+ 000004E1  3C 2E						cmp al, '.'
+ 000004E3  74 0A						je breakPrintCategName
+ 000004E5  8A 06						mov al, [esi]
+ 000004E7  E8 00000000 E					call writeChar
+							
+ 000004EC  46							inc esi
+ 000004ED  E2 F0		loop loopPrintCategName
+
+ 000004EF			breakPrintCategName:
+ 000004EF  BA 0000C5F2 R	mov edx, offset semiColon
+ 000004F4  E8 00000000 E	call writeString
+ 000004F9  E8 00000000 E	call crlf
+
+ 000004FE  B8 0000000F		mov eax, 0fh
+ 00000503  A3 0000C5EA R	mov fileEmotionWritten, eax
+
+
+ 00000508  BA 0000C5F5 R	mov edx, offset bigSpace
+ 0000050D  E8 00000000 E	call writeString
+
+				ret
+ 00000516			printEmotion ENDP
+
+				;-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+ 00000516			extracted_Word PROC
+
+				INVOKE clear, addr extractedWord, extractedWordSize 
+ 00000526  B9 00004E20		mov ecx, lengthOf inputString
+
+ 0000052B  B8 00000000		mov eax, 0
+ 00000530  BB 00000000		mov ebx, 0
+ 00000535  A3 00007769 R	mov extractedWordSize, eax
+
+ 0000053A  8B 35 000075D5 R	mov esi, currentInputIndex
+ 00000540  BF 000075D9 R	mov edi, offset extractedWord
+
+ 00000545  B0 0A		mov al, 0ah
+ 00000547  AA			stosb
+ 00000548  FF 05 00007769 R	inc extractedWordSize
+
+
+ 0000054E  3C 2E		cmp al, '.'
+ 00000550  74 2A		je return
+
+ 00000552			noComma:
+ 00000552			copy:
+ 00000552  8A 06				 mov al, [esi]
+ 00000554  3C 0A				 cmp al, 0ah
+ 00000556  74 1A				 je addComma
+						 				 
+ 00000558  8A 1E				 mov bl, [esi]
+ 0000055A  80 FB 2E				 cmp bl, '.'
+ 0000055D  74 09				 je FileEnded
+
+ 0000055F  A4					 movsb
+ 00000560  FF 05 00007769 R			 inc extractedWordSize
+ 00000566  E2 EA		loop copy
+
+ 00000568			FileEnded:
+ 00000568  B8 0000000F		mov eax, 0fh
+ 0000056D  A3 0000C5E6 R	mov inputFileEnded, eax
+
+ 00000572			addComma:
+ 00000572  B0 0A		mov al, 0ah
+ 00000574  AA			stosb
+ 00000575  46			inc esi
+ 00000576  FF 05 00007769 R	inc extractedWordSize
+
+
+
+ 0000057C			return:		  ;///you need to find size of the word here	
+ 0000057C  89 35 000075D5 R	mov currentInputIndex, esi 		        ;///preserve esi for next use, if there's a problem 
+
+ 00000582  C3			ret
+ 00000583			extracted_Word ENDP
+
+				;-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+ 00000583			wordFind proc uses ecx esi edi eax, src: ptr byte, key: ptr byte, strSize: dword, keySize: dword
+
+ 0000058A  8B 4D 10		  mov ecx, strSize
+ 0000058D  8B 75 08		  mov esi, src
+ 00000590  8B 7D 0C		  mov edi, key
+ 00000593  B8 00000000		  mov eax, 0
+				  ;dec keySize //because there is no null character
+ 00000598			  L2:
+				  
+ 00000598  3B 45 14		    cmp eax, keySize
+ 0000059B  74 23		    jz L5
+
+ 0000059D  A6			    cmpsb
+ 0000059E  74 10		    jz L3
+ 000005A0  8B 7D 0C		    mov edi, key
+ 000005A3  83 F8 01		    cmp eax, 1
+ 000005A6  72 09		    jb L4
+ 000005A8  4E			    dec esi
+ 000005A9  B8 00000000		    mov eax, 0
+ 000005AE  EB 01		    jmp L4
+
+ 000005B0			    L3: 
+ 000005B0  40			    inc eax
+				   
+ 000005B1			  L4: 
+ 000005B1  E2 E5		  loop L2
+				 
+				  ;not found
+ 000005B3  BB FFFFFFFF		  mov ebx, -1
+				  ret
+
+ 000005C0			  L5: ;found
+ 000005C0  8B DE		      mov ebx, esi
+ 000005C2  2B 5D 08		      sub ebx, src
+ 000005C5  2B D8		      sub ebx, eax
+				  ret
+ 000005CF			wordFind endp
+				;-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ 000005CF			countEmotions PROC,NoOfEmotions:DWORD
+
+ 000005D2  8B 45 08		mov eax,NoOfEmotions
+ 000005D5  48			dec eax
+ 000005D6  3C 05		cmp al,5
+ 000005D8  74 14		je inHappy
+ 000005DA  3C 04		cmp al,4
+ 000005DC  74 1C		je inSad
+ 000005DE  3C 03		cmp al,3
+ 000005E0  74 24		je inAnger
+ 000005E2  3C 02		cmp al,2
+ 000005E4  74 2C		je inDisgust
+ 000005E6  3C 01		cmp al,1
+ 000005E8  74 34		je inFear
+ 000005EA  3C 00		cmp al,0
+ 000005EC  74 3C		je inNone
+
+ 000005EE			inHappy:
+ 000005EE  8B F0				mov esi,eax
+ 000005F0  80 04 35				add EmotionCount[si],1
+	   00002714 R 01
+ 000005F8  EB 3C				jmp last
+ 000005FA			inSad:
+ 000005FA  8B F0			  mov esi,eax
+ 000005FC  80 04 35			  add EmotionCount[si],1
+	   00002714 R 01
+ 00000604  EB 30			  jmp last
+ 00000606			inAnger:
+ 00000606  8B F0			    mov esi,eax
+ 00000608  80 04 35			    add EmotionCount[si],1
+	   00002714 R 01
+ 00000610  EB 24				jmp last
+ 00000612			inDisgust:
+ 00000612  8B F0			     mov esi,eax
+ 00000614  80 04 35			     add EmotionCount[si],1
+	   00002714 R 01
+ 0000061C  EB 18				 jmp last
+ 0000061E			inFear:
+ 0000061E  8B F0			   mov esi,eax
+ 00000620  80 04 35			   add EmotionCount[si],1
+	   00002714 R 01
+ 00000628  EB 0C			   jmp last
+ 0000062A			inNone:
+ 0000062A  8B F0				mov esi,eax
+ 0000062C  80 04 35				add EmotionCount[si],1
+	   00002714 R 01
+ 00000634  EB 00				jmp last
+
+ 00000636			last:
+				ret
+ 0000063A			countEmotions ENDP
+				END main
+
+				;XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+Microsoft (R) Macro Assembler Version 12.00.21005.1	    05/20/20 00:25:16
+MY COAL PROJEC						     Symbols 2 - 1
+
+
+
+
+Structures and Unions:
+
+                N a m e                  Size
+                                         Offset      Type
+
+CONSOLE_CURSOR_INFO  . . . . . .	 00000008
+  dwSize . . . . . . . . . . . .	 00000000	 DWord
+  bVisible . . . . . . . . . . .	 00000004	 DWord
+CONSOLE_SCREEN_BUFFER_INFO . . .	 00000016
+  dwSize . . . . . . . . . . . .	 00000000	 DWord
+  dwCursorPosition . . . . . . .	 00000004	 DWord
+  wAttributes  . . . . . . . . .	 00000008	 Word
+  srWindow . . . . . . . . . . .	 0000000A	 QWord
+  dwMaximumWindowSize  . . . . .	 00000012	 DWord
+COORD  . . . . . . . . . . . . .	 00000004
+  X  . . . . . . . . . . . . . .	 00000000	 Word
+  Y  . . . . . . . . . . . . . .	 00000002	 Word
+FILETIME . . . . . . . . . . . .	 00000008
+  loDateTime . . . . . . . . . .	 00000000	 DWord
+  hiDateTime . . . . . . . . . .	 00000004	 DWord
+FOCUS_EVENT_RECORD . . . . . . .	 00000004
+  bSetFocus  . . . . . . . . . .	 00000000	 DWord
+FPU_ENVIRON  . . . . . . . . . .	 0000001C
+  controlWord  . . . . . . . . .	 00000000	 Word
+  statusWord . . . . . . . . . .	 00000004	 Word
+  tagWord  . . . . . . . . . . .	 00000008	 Word
+  instrPointerOffset . . . . . .	 0000000C	 DWord
+  instrPointerSelector . . . . .	 00000010	 DWord
+  operandPointerOffset . . . . .	 00000014	 DWord
+  operandPointerSelector . . . .	 00000018	 Word
+INPUT_RECORD . . . . . . . . . .	 00000014
+  EventType  . . . . . . . . . .	 00000000	 Word
+  Event  . . . . . . . . . . . .	 00000004	 XmmWord
+  bKeyDown . . . . . . . . . . .	 00000000	 DWord
+  wRepeatCount . . . . . . . . .	 00000004	 Word
+  wVirtualKeyCode  . . . . . . .	 00000006	 Word
+  wVirtualScanCode . . . . . . .	 00000008	 Word
+  uChar  . . . . . . . . . . . .	 0000000A	 Word
+  UnicodeChar  . . . . . . . . .	 00000000	 Word
+  AsciiChar  . . . . . . . . . .	 00000000	 Byte
+  dwControlKeyState  . . . . . .	 0000000C	 DWord
+  dwMousePosition  . . . . . . .	 00000000	 DWord
+  dwButtonState  . . . . . . . .	 00000004	 DWord
+  dwMouseControlKeyState . . . .	 00000008	 DWord
+  dwEventFlags . . . . . . . . .	 0000000C	 DWord
+  dwSize . . . . . . . . . . . .	 00000000	 DWord
+  dwCommandId  . . . . . . . . .	 00000000	 DWord
+  bSetFocus  . . . . . . . . . .	 00000000	 DWord
+KEY_EVENT_RECORD . . . . . . . .	 00000010
+  bKeyDown . . . . . . . . . . .	 00000000	 DWord
+  wRepeatCount . . . . . . . . .	 00000004	 Word
+  wVirtualKeyCode  . . . . . . .	 00000006	 Word
+  wVirtualScanCode . . . . . . .	 00000008	 Word
+  uChar  . . . . . . . . . . . .	 0000000A	 Word
+  UnicodeChar  . . . . . . . . .	 00000000	 Word
+  AsciiChar  . . . . . . . . . .	 00000000	 Byte
+  dwControlKeyState  . . . . . .	 0000000C	 DWord
+MENU_EVENT_RECORD  . . . . . . .	 00000004
+  dwCommandId  . . . . . . . . .	 00000000	 DWord
+MOUSE_EVENT_RECORD . . . . . . .	 00000010
+  dwMousePosition  . . . . . . .	 00000000	 DWord
+  dwButtonState  . . . . . . . .	 00000004	 DWord
+  dwMouseControlKeyState . . . .	 00000008	 DWord
+  dwEventFlags . . . . . . . . .	 0000000C	 DWord
+SMALL_RECT . . . . . . . . . . .	 00000008
+  Left . . . . . . . . . . . . .	 00000000	 Word
+  Top  . . . . . . . . . . . . .	 00000002	 Word
+  Right  . . . . . . . . . . . .	 00000004	 Word
+  Bottom . . . . . . . . . . . .	 00000006	 Word
+SYSTEMTIME . . . . . . . . . . .	 00000010
+  wYear  . . . . . . . . . . . .	 00000000	 Word
+  wMonth . . . . . . . . . . . .	 00000002	 Word
+  wDayOfWeek . . . . . . . . . .	 00000004	 Word
+  wDay . . . . . . . . . . . . .	 00000006	 Word
+  wHour  . . . . . . . . . . . .	 00000008	 Word
+  wMinute  . . . . . . . . . . .	 0000000A	 Word
+  wSecond  . . . . . . . . . . .	 0000000C	 Word
+  wMilliseconds  . . . . . . . .	 0000000E	 Word
+WINDOW_BUFFER_SIZE_RECORD  . . .	 00000004
+  dwSize . . . . . . . . . . . .	 00000000	 DWord
+
+
+Segments and Groups:
+
+                N a m e                 Size     Length   Align   Combine Class
+
+FLAT . . . . . . . . . . . . . .	GROUP
+STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
+_DATA  . . . . . . . . . . . . .	32 Bit	 0000CA1D Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 0000063A Para	  Public  'CODE'	
+
+
+Procedures, parameters, and locals:
+
+                N a m e                 Type     Value    Attr
+
+CloseFile  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+CloseHandle  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Clrscr . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+CreateFileA  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+CreateOutputFile . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Crlf . . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Delay  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+DumpMem  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+DumpRegs . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ExitProcess  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+FileTimeToDosDateTime  . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+FileTimeToSystemTime . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+FlushConsoleInputBuffer  . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+FormatMessageA . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetCommandLineA  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetCommandTail . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetConsoleCP . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetConsoleCursorInfo . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetConsoleMode . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetConsoleScreenBufferInfo . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetDateTime  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetFileTime  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetKeyState  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetLastError . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetLocalTime . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetMaxXY . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetMseconds  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetNumberOfConsoleInputEvents  .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetProcessHeap . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetStdHandle . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetSystemTime  . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetTextColor . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+GetTickCount . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Gotoxy . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+HeapAlloc  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+HeapCreate . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+HeapDestroy  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+HeapFree . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+HeapSize . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+IsDigit  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+LocalFree  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+MessageBoxA  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+MsgBoxAsk  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+MsgBox . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+NoFile . . . . . . . . . . . . .	P Near	 0000046F _TEXT	Length= 00000037 Public STDCALL
+  fileName . . . . . . . . . . .	DWord	 bp + 00000008
+OpenInputFile  . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ParseDecimal32 . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ParseInteger32 . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+PeekConsoleInputA  . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Random32 . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+RandomRange  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Randomize  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadChar . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadConsoleA . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadConsoleInputA  . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadDec  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadFile . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadFloat  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadFromFile . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadHex  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadInt  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadKeyFlush . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadKey  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ReadString . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleCursorInfo . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleCursorPosition . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleMode . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleScreenBufferSize . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleTextAttribute  . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleTitleA . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetConsoleWindowInfo . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetFilePointer . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetLocalTime . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SetTextColor . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+ShowFPUStack . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Sleep  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+StrLength  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Str_compare  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Str_copy . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Str_length . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Str_trim . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+Str_ucase  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+SystemTimeToFileTime . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WaitMsg  . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteBinB  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteBin . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteChar  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteConsoleA  . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteConsoleOutputAttribute  . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteConsoleOutputCharacterA . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteDec . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteFile  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteFloat . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteHexB  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteHex . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteInt . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteStackFrameName  . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+clear  . . . . . . . . . . . . .	P Near	 000004A6 _TEXT	Length= 00000014 Public STDCALL
+  textString . . . . . . . . . .	DWord	 bp + 00000008
+  StringLength . . . . . . . . .	DWord	 bp + 0000000C
+countEmotions  . . . . . . . . .	P Near	 000005CF _TEXT	Length= 0000006B Public STDCALL
+  NoOfEmotions . . . . . . . . .	DWord	 bp + 00000008
+  inHappy  . . . . . . . . . . .	L Near	 000005EE _TEXT	
+  inSad  . . . . . . . . . . . .	L Near	 000005FA _TEXT	
+  inAnger  . . . . . . . . . . .	L Near	 00000606 _TEXT	
+  inDisgust  . . . . . . . . . .	L Near	 00000612 _TEXT	
+  inFear . . . . . . . . . . . .	L Near	 0000061E _TEXT	
+  inNone . . . . . . . . . . . .	L Near	 0000062A _TEXT	
+  last . . . . . . . . . . . . .	L Near	 00000636 _TEXT	
+extracted_Word . . . . . . . . .	P Near	 00000516 _TEXT	Length= 0000006D Public STDCALL
+  noComma  . . . . . . . . . . .	L Near	 00000552 _TEXT	
+  copy . . . . . . . . . . . . .	L Near	 00000552 _TEXT	
+  FileEnded  . . . . . . . . . .	L Near	 00000568 _TEXT	
+  addComma . . . . . . . . . . .	L Near	 00000572 _TEXT	
+  return . . . . . . . . . . . .	L Near	 0000057C _TEXT	
+main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 0000046F Public STDCALL
+  lop  . . . . . . . . . . . . .	L Near	 00000087 _TEXT	
+  nx . . . . . . . . . . . . . .	L Near	 00000099 _TEXT	
+  comp . . . . . . . . . . . . .	L Near	 000000B0 _TEXT	
+  l1 . . . . . . . . . . . . . .	L Near	 000000F1 _TEXT	
+  done . . . . . . . . . . . . .	L Near	 00000101 _TEXT	
+  x  . . . . . . . . . . . . . .	L Near	 0000011E _TEXT	
+  d  . . . . . . . . . . . . . .	L Near	 0000012E _TEXT	
+  y  . . . . . . . . . . . . . .	L Near	 00000169 _TEXT	
+  q  . . . . . . . . . . . . . .	L Near	 00000181 _TEXT	
+  a  . . . . . . . . . . . . . .	L Near	 000001A3 _TEXT	
+  b  . . . . . . . . . . . . . .	L Near	 000001B3 _TEXT	
+  z  . . . . . . . . . . . . . .	L Near	 00000204 _TEXT	
+  OuterLoop  . . . . . . . . . .	L Near	 00000281 _TEXT	
+  innerLoop  . . . . . . . . . .	L Near	 000002E9 _TEXT	
+  alreadyPrintedCateg2 . . . . .	L Near	 00000339 _TEXT	
+  loopEnd  . . . . . . . . . . .	L Near	 00000356 _TEXT	
+  breakLoopCateg2  . . . . . . .	L Near	 0000035E _TEXT	
+  FileNotExist . . . . . . . . .	L Near	 00000365 _TEXT	
+  skipThis . . . . . . . . . . .	L Near	 00000370 _TEXT	
+  noInputFormat  . . . . . . . .	L Near	 00000389 _TEXT	
+  InputFileNotExist  . . . . . .	L Near	 0000039F _TEXT	
+  skipDownStatement  . . . . . .	L Near	 000003A9 _TEXT	
+  LEC  . . . . . . . . . . . . .	L Near	 000003BA _TEXT	
+  storeLargest . . . . . . . . .	L Near	 000003CA _TEXT	
+  next . . . . . . . . . . . . .	L Near	 000003D7 _TEXT	
+  pHappy . . . . . . . . . . . .	L Near	 00000402 _TEXT	
+  pSad . . . . . . . . . . . . .	L Near	 00000413 _TEXT	
+  pAnger . . . . . . . . . . . .	L Near	 00000424 _TEXT	
+  pDisgust . . . . . . . . . . .	L Near	 00000435 _TEXT	
+  pFear  . . . . . . . . . . . .	L Near	 00000446 _TEXT	
+  pNone  . . . . . . . . . . . .	L Near	 00000457 _TEXT	
+  conclude . . . . . . . . . . .	L Near	 00000468 _TEXT	
+printEmotion . . . . . . . . . .	P Near	 000004CC _TEXT	Length= 0000004A Public STDCALL
+  EmotionWord  . . . . . . . . .	DWord	 bp + 00000008
+  EmotionWordSize  . . . . . . .	DWord	 bp + 0000000C
+  loopPrintCategName . . . . . .	L Near	 000004DF _TEXT	
+  breakPrintCategName  . . . . .	L Near	 000004EF _TEXT	
+printFoundWord . . . . . . . . .	P Near	 000004BA _TEXT	Length= 00000012 Public STDCALL
+  foundWord  . . . . . . . . . .	DWord	 bp + 00000008
+printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
+scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
+storeNoEmotionWord . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
+wordFind . . . . . . . . . . . .	P Near	 00000583 _TEXT	Length= 0000004C Public STDCALL
+  src  . . . . . . . . . . . . .	DWord	 bp + 00000008
+  key  . . . . . . . . . . . . .	DWord	 bp + 0000000C
+  strSize  . . . . . . . . . . .	DWord	 bp + 00000010
+  keySize  . . . . . . . . . . .	DWord	 bp + 00000014
+  L2 . . . . . . . . . . . . . .	L Near	 00000598 _TEXT	
+  L3 . . . . . . . . . . . . . .	L Near	 000005B0 _TEXT	
+  L4 . . . . . . . . . . . . . .	L Near	 000005B1 _TEXT	
+  L5 . . . . . . . . . . . . . .	L Near	 000005C0 _TEXT	
+wsprintfA  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
+
+
+Symbols:
+
+                N a m e                 Type     Value    Attr
+
+@CodeSize  . . . . . . . . . . .	Number	 00000000h   
+@DataSize  . . . . . . . . . . .	Number	 00000000h   
+@Interface . . . . . . . . . . .	Number	 00000003h   
+@Model . . . . . . . . . . . . .	Number	 00000007h   
+@code  . . . . . . . . . . . . .	Text   	 _TEXT
+@data  . . . . . . . . . . . . .	Text   	 FLAT
+@fardata?  . . . . . . . . . . .	Text   	 FLAT
+@fardata . . . . . . . . . . . .	Text   	 FLAT
+@stack . . . . . . . . . . . . .	Text   	 FLAT
+ALT_MASK . . . . . . . . . . . .	Number	 00000003h   
+BlueTextOnMagenta  . . . . . . .	Number	 0000005Fh   
+CAPSLOCK_ON  . . . . . . . . . .	Number	 00000080h   
+CREATE_ALWAYS  . . . . . . . . .	Number	 00000002h   
+CREATE_NEW . . . . . . . . . . .	Number	 00000001h   
+CTRL_MASK  . . . . . . . . . . .	Number	 0000000Ch   
+CreateFile . . . . . . . . . . .	Text   	 CreateFileA
+DO_NOT_SHARE . . . . . . . . . .	Number	 00000000h   
+DefaultColor . . . . . . . . . .	Number	 000000F5h   
+EC . . . . . . . . . . . . . . .	Byte	 0000271A _DATA	
+ENABLE_ECHO_INPUT  . . . . . . .	Number	 00000004h   
+ENABLE_LINE_INPUT  . . . . . . .	Number	 00000002h   
+ENABLE_MOUSE_INPUT . . . . . . .	Number	 00000010h   
+ENABLE_PROCESSED_INPUT . . . . .	Number	 00000001h   
+ENABLE_PROCESSED_OUTPUT  . . . .	Number	 00000001h   
+ENABLE_WINDOW_INPUT  . . . . . .	Number	 00000008h   
+ENABLE_WRAP_AT_EOL_OUTPUT  . . .	Number	 00000002h   
+ENHANCED_KEY . . . . . . . . . .	Number	 00000100h   
+EmotionCount . . . . . . . . . .	Byte	 00002714 _DATA	
+EmotionLength  . . . . . . . . .	DWord	 0000279B _DATA	
+EmotionNum . . . . . . . . . . .	DWord	 00002797 _DATA	
+EmotionStringSize  . . . . . . .	DWord	 00000000 _DATA	
+EmotionString  . . . . . . . . .	Byte	 00000004 _DATA	
+EmotionWordsCount  . . . . . . .	Byte	 0000776D _DATA	
+EmotionfileHandler . . . . . . .	DWord	 000027A3 _DATA	
+FALSE  . . . . . . . . . . . . .	Number	 00000000h   
+FILE_APPEND_DATA . . . . . . . .	Number	 00000004h   
+FILE_ATTRIBUTE_ARCHIVE . . . . .	Number	 00000020h   
+FILE_ATTRIBUTE_COMPRESSED  . . .	Number	 00000800h   
+FILE_ATTRIBUTE_DEVICE  . . . . .	Number	 00000040h   
+FILE_ATTRIBUTE_DIRECTORY . . . .	Number	 00000010h   
+FILE_ATTRIBUTE_ENCRYPTED . . . .	Number	 00004000h   
+FILE_ATTRIBUTE_HIDDEN  . . . . .	Number	 00000002h   
+FILE_ATTRIBUTE_NORMAL  . . . . .	Number	 00000080h   
+FILE_ATTRIBUTE_NOT_CONTENT_INDEXED .	Number	 00002000h   
+FILE_ATTRIBUTE_OFFLINE . . . . .	Number	 00001000h   
+FILE_ATTRIBUTE_READONLY  . . . .	Number	 00000001h   
+FILE_ATTRIBUTE_REPARSE_POINT . .	Number	 00000400h   
+FILE_ATTRIBUTE_SPARSE_FILE . . .	Number	 00000200h   
+FILE_ATTRIBUTE_SYSTEM  . . . . .	Number	 00000004h   
+FILE_ATTRIBUTE_TEMPORARY . . . .	Number	 00000100h   
+FILE_BEGIN . . . . . . . . . . .	Number	 00000000h   
+FILE_CURRENT . . . . . . . . . .	Number	 00000001h   
+FILE_DELETE_CHILD  . . . . . . .	Number	 00000040h   
+FILE_END . . . . . . . . . . . .	Number	 00000002h   
+FILE_READ_DATA . . . . . . . . .	Number	 00000001h   
+FILE_SHARE_DELETE  . . . . . . .	Number	 00000004h   
+FILE_SHARE_READ  . . . . . . . .	Number	 00000001h   
+FILE_SHARE_WRITE . . . . . . . .	Number	 00000002h   
+FILE_WRITE_DATA  . . . . . . . .	Number	 00000002h   
+FOCUS_EVENT  . . . . . . . . . .	Number	 00000010h   
+FORMAT_MESSAGE_ALLOCATE_BUFFER .	Number	 00000100h   
+FORMAT_MESSAGE_FROM_SYSTEM . . .	Number	 00001000h   
+FileNames  . . . . . . . . . . .	Byte	 00002720 _DATA	
+FormatMessage  . . . . . . . . .	Text   	 FormatMessageA
+GENERIC_ALL  . . . . . . . . . .	Number	 10000000h   
+GENERIC_EXECUTE  . . . . . . . .	Number	 20000000h   
+GENERIC_READ . . . . . . . . . .	Number	 -80000000h   
+GENERIC_WRITE  . . . . . . . . .	Number	 40000000h   
+GetCommandLine . . . . . . . . .	Text   	 GetCommandLineA
+HANDLE . . . . . . . . . . . . .	Text   	 DWORD
+HEAP_GENERATE_EXCEPTIONS . . . .	Number	 00000004h   
+HEAP_GROWABLE  . . . . . . . . .	Number	 00000002h   
+HEAP_NO_SERIALIZE  . . . . . . .	Number	 00000001h   
+HEAP_REALLOC_IN_PLACE_ONLY . . .	Number	 00000010h   
+HEAP_ZERO_MEMORY . . . . . . . .	Number	 00000008h   
+IDABORT  . . . . . . . . . . . .	Number	 00000003h   
+IDCANCEL . . . . . . . . . . . .	Number	 00000002h   
+IDCLOSE  . . . . . . . . . . . .	Number	 00000008h   
+IDCONTINUE . . . . . . . . . . .	Number	 0000000Bh   
+IDHELP . . . . . . . . . . . . .	Number	 00000009h   
+IDIGNORE . . . . . . . . . . . .	Number	 00000005h   
+IDNO . . . . . . . . . . . . . .	Number	 00000007h   
+IDOK . . . . . . . . . . . . . .	Number	 00000001h   
+IDRETRY  . . . . . . . . . . . .	Number	 00000004h   
+IDTIMEOUT  . . . . . . . . . . .	Number	 00007D00h   
+IDTRYAGAIN . . . . . . . . . . .	Number	 0000000Ah   
+IDYES  . . . . . . . . . . . . .	Number	 00000006h   
+INVALID_HANDLE_VALUE . . . . . .	Number	 -00000001h   
+IndexNoEmotionWords  . . . . . .	DWord	 0000C58D _DATA	
+KBDOWN_FLAG  . . . . . . . . . .	Number	 00000001h   
+KEY_EVENT  . . . . . . . . . . .	Number	 00000001h   
+KEY_MASKS  . . . . . . . . . . .	Number	 0000001Fh   
+LEFT_ALT_PRESSED . . . . . . . .	Number	 00000002h   
+LEFT_CTRL_PRESSED  . . . . . . .	Number	 00000008h   
+MB_ABORTRETRYIGNORE  . . . . . .	Number	 00000002h   
+MB_APPLMODAL . . . . . . . . . .	Number	 00000000h   
+MB_CANCELTRYCONTINUE . . . . . .	Number	 00000006h   
+MB_DEFBUTTON1  . . . . . . . . .	Number	 00000000h   
+MB_DEFBUTTON2  . . . . . . . . .	Number	 00000100h   
+MB_DEFBUTTON3  . . . . . . . . .	Number	 00000200h   
+MB_DEFBUTTON4  . . . . . . . . .	Number	 00000300h   
+MB_HELP  . . . . . . . . . . . .	Number	 00004000h   
+MB_ICONASTERISK  . . . . . . . .	Number	 00000040h   
+MB_ICONERROR . . . . . . . . . .	Number	 00000010h   
+MB_ICONEXCLAMATION . . . . . . .	Number	 00000030h   
+MB_ICONHAND  . . . . . . . . . .	Number	 00000010h   
+MB_ICONINFORMATION . . . . . . .	Number	 00000040h   
+MB_ICONQUESTION  . . . . . . . .	Number	 00000020h   
+MB_ICONSTOP  . . . . . . . . . .	Number	 00000010h   
+MB_ICONWARNING . . . . . . . . .	Number	 00000030h   
+MB_OKCANCEL  . . . . . . . . . .	Number	 00000001h   
+MB_OK  . . . . . . . . . . . . .	Number	 00000000h   
+MB_RETRYCANCEL . . . . . . . . .	Number	 00000005h   
+MB_SYSTEMMODAL . . . . . . . . .	Number	 00001000h   
+MB_TASKMODAL . . . . . . . . . .	Number	 00002000h   
+MB_USERICON  . . . . . . . . . .	Number	 00000080h   
+MB_YESNOCANCEL . . . . . . . . .	Number	 00000003h   
+MB_YESNO . . . . . . . . . . . .	Number	 00000004h   
+MENU_EVENT . . . . . . . . . . .	Number	 00000008h   
+MOUSE_EVENT  . . . . . . . . . .	Number	 00000002h   
+MessageBox . . . . . . . . . . .	Text   	 MessageBoxA
+NULL . . . . . . . . . . . . . .	Number	 00000000h   
+NUMLOCK_ON . . . . . . . . . . .	Number	 00000020h   
+OPEN_ALWAYS  . . . . . . . . . .	Number	 00000004h   
+OPEN_EXISTING  . . . . . . . . .	Number	 00000003h   
+PeekConsoleInput . . . . . . . .	Text   	 PeekConsoleInputA
+RIGHT_ALT_PRESSED  . . . . . . .	Number	 00000001h   
+RIGHT_CTRL_PRESSED . . . . . . .	Number	 00000004h   
+ReadConsoleInput . . . . . . . .	Text   	 ReadConsoleInputA
+ReadConsole  . . . . . . . . . .	Text   	 ReadConsoleA
+SCROLLLOCK_ON  . . . . . . . . .	Number	 00000040h   
+SHIFT_MASK . . . . . . . . . . .	Number	 00000010h   
+SHIFT_PRESSED  . . . . . . . . .	Number	 00000010h   
+STD_ERROR_HANDLE . . . . . . . .	Number	 -0000000Ch   
+STD_INPUT_HANDLE . . . . . . . .	Number	 -0000000Ah   
+STD_OUTPUT_HANDLE  . . . . . . .	Number	 -0000000Bh   
+SetConsoleTitle  . . . . . . . .	Text   	 SetConsoleTitleA
+TAB  . . . . . . . . . . . . . .	Number	 00000009h   
+TRUE . . . . . . . . . . . . . .	Number	 00000001h   
+TRUNCATE_EXISTING  . . . . . . .	Number	 00000005h   
+TempFileNames  . . . . . . . . .	DWord	 0000279F _DATA	
+VK_11  . . . . . . . . . . . . .	Number	 000000BDh   
+VK_12  . . . . . . . . . . . . .	Number	 000000BBh   
+VK_ADD . . . . . . . . . . . . .	Number	 0000006Bh   
+VK_BACK  . . . . . . . . . . . .	Number	 00000008h   
+VK_CANCEL  . . . . . . . . . . .	Number	 00000003h   
+VK_CAPITAL . . . . . . . . . . .	Number	 00000014h   
+VK_CLEAR . . . . . . . . . . . .	Number	 0000000Ch   
+VK_CONTROL . . . . . . . . . . .	Number	 00000011h   
+VK_DECIMAL . . . . . . . . . . .	Number	 0000006Eh   
+VK_DELETE  . . . . . . . . . . .	Number	 0000002Eh   
+VK_DIVIDE  . . . . . . . . . . .	Number	 0000006Fh   
+VK_DOWN  . . . . . . . . . . . .	Number	 00000028h   
+VK_END . . . . . . . . . . . . .	Number	 00000023h   
+VK_ESCAPE  . . . . . . . . . . .	Number	 0000001Bh   
+VK_EXECUTE . . . . . . . . . . .	Number	 0000002Bh   
+VK_F10 . . . . . . . . . . . . .	Number	 00000079h   
+VK_F11 . . . . . . . . . . . . .	Number	 0000007Ah   
+VK_F12 . . . . . . . . . . . . .	Number	 0000007Bh   
+VK_F13 . . . . . . . . . . . . .	Number	 0000007Ch   
+VK_F14 . . . . . . . . . . . . .	Number	 0000007Dh   
+VK_F15 . . . . . . . . . . . . .	Number	 0000007Eh   
+VK_F16 . . . . . . . . . . . . .	Number	 0000007Fh   
+VK_F17 . . . . . . . . . . . . .	Number	 00000080h   
+VK_F18 . . . . . . . . . . . . .	Number	 00000081h   
+VK_F19 . . . . . . . . . . . . .	Number	 00000082h   
+VK_F1  . . . . . . . . . . . . .	Number	 00000070h   
+VK_F20 . . . . . . . . . . . . .	Number	 00000083h   
+VK_F21 . . . . . . . . . . . . .	Number	 00000084h   
+VK_F22 . . . . . . . . . . . . .	Number	 00000085h   
+VK_F23 . . . . . . . . . . . . .	Number	 00000086h   
+VK_F24 . . . . . . . . . . . . .	Number	 00000087h   
+VK_F2  . . . . . . . . . . . . .	Number	 00000071h   
+VK_F3  . . . . . . . . . . . . .	Number	 00000072h   
+VK_F4  . . . . . . . . . . . . .	Number	 00000073h   
+VK_F5  . . . . . . . . . . . . .	Number	 00000074h   
+VK_F6  . . . . . . . . . . . . .	Number	 00000075h   
+VK_F7  . . . . . . . . . . . . .	Number	 00000076h   
+VK_F8  . . . . . . . . . . . . .	Number	 00000077h   
+VK_F9  . . . . . . . . . . . . .	Number	 00000078h   
+VK_HELP  . . . . . . . . . . . .	Number	 0000002Fh   
+VK_HOME  . . . . . . . . . . . .	Number	 00000024h   
+VK_INSERT  . . . . . . . . . . .	Number	 0000002Dh   
+VK_LBUTTON . . . . . . . . . . .	Number	 00000001h   
+VK_LCONTROL  . . . . . . . . . .	Number	 000000A2h   
+VK_LEFT  . . . . . . . . . . . .	Number	 00000025h   
+VK_LMENU . . . . . . . . . . . .	Number	 000000A4h   
+VK_LSHIFT  . . . . . . . . . . .	Number	 000000A0h   
+VK_MENU  . . . . . . . . . . . .	Number	 00000012h   
+VK_MULTIPLY  . . . . . . . . . .	Number	 0000006Ah   
+VK_NEXT  . . . . . . . . . . . .	Number	 00000022h   
+VK_NUMLOCK . . . . . . . . . . .	Number	 00000090h   
+VK_NUMPAD0 . . . . . . . . . . .	Number	 00000060h   
+VK_NUMPAD1 . . . . . . . . . . .	Number	 00000061h   
+VK_NUMPAD2 . . . . . . . . . . .	Number	 00000062h   
+VK_NUMPAD3 . . . . . . . . . . .	Number	 00000063h   
+VK_NUMPAD4 . . . . . . . . . . .	Number	 00000064h   
+VK_NUMPAD5 . . . . . . . . . . .	Number	 00000065h   
+VK_NUMPAD6 . . . . . . . . . . .	Number	 00000066h   
+VK_NUMPAD7 . . . . . . . . . . .	Number	 00000067h   
+VK_NUMPAD8 . . . . . . . . . . .	Number	 00000068h   
+VK_NUMPAD9 . . . . . . . . . . .	Number	 00000069h   
+VK_PAUSE . . . . . . . . . . . .	Number	 00000013h   
+VK_PRINT . . . . . . . . . . . .	Number	 0000002Ah   
+VK_PRIOR . . . . . . . . . . . .	Number	 00000021h   
+VK_RBUTTON . . . . . . . . . . .	Number	 00000002h   
+VK_RCONTROL  . . . . . . . . . .	Number	 000000A3h   
+VK_RETURN  . . . . . . . . . . .	Number	 0000000Dh   
+VK_RIGHT . . . . . . . . . . . .	Number	 00000027h   
+VK_RMENU . . . . . . . . . . . .	Number	 000000A5h   
+VK_RSHIFT  . . . . . . . . . . .	Number	 000000A1h   
+VK_SCROLL  . . . . . . . . . . .	Number	 00000091h   
+VK_SEPARATER . . . . . . . . . .	Number	 0000006Ch   
+VK_SHIFT . . . . . . . . . . . .	Number	 00000010h   
+VK_SNAPSHOT  . . . . . . . . . .	Number	 0000002Ch   
+VK_SPACE . . . . . . . . . . . .	Number	 00000020h   
+VK_SUBTRACT  . . . . . . . . . .	Number	 0000006Dh   
+VK_TAB . . . . . . . . . . . . .	Number	 00000009h   
+VK_UP  . . . . . . . . . . . . .	Number	 00000026h   
+WINDOW_BUFFER_SIZE_EVENT . . . .	Number	 00000004h   
+WriteConsoleOutputCharacter  . .	Text   	 WriteConsoleOutputCharacterA
+WriteConsole . . . . . . . . . .	Text   	 WriteConsoleA
+bigSpace . . . . . . . . . . . .	Byte	 0000C5F5 _DATA	
+black  . . . . . . . . . . . . .	Number	 00000000h   
+blue . . . . . . . . . . . . . .	Number	 00000001h   
+brown  . . . . . . . . . . . . .	Number	 00000006h   
+currentInputIndex  . . . . . . .	DWord	 000075D5 _DATA	
+cyan . . . . . . . . . . . . . .	Number	 00000003h   
+disclaimer . . . . . . . . . . .	Byte	 0000C997 _DATA	
+dotline  . . . . . . . . . . . .	Byte	 0000C91B _DATA	
+dot  . . . . . . . . . . . . . .	Byte	 0000C5F4 _DATA	
+exit . . . . . . . . . . . . . .	Text   	 INVOKE ExitProcess,0
+extractedWordSize  . . . . . . .	DWord	 00007769 _DATA	
+extractedWord  . . . . . . . . .	Byte	 000075D9 _DATA	
+fileEmotionWritten . . . . . . .	DWord	 0000C5EA _DATA	
+gray . . . . . . . . . . . . . .	Number	 00000008h   
+green  . . . . . . . . . . . . .	Number	 00000002h   
+inputFileEnded . . . . . . . . .	DWord	 0000C5E6 _DATA	
+inputFileHandler . . . . . . . .	DWord	 000075D1 _DATA	
+inputFile  . . . . . . . . . . .	Byte	 000027A7 _DATA	
+inputString  . . . . . . . . . .	Byte	 000027B1 _DATA	
+largest  . . . . . . . . . . . .	Byte	 0000271B _DATA	
+lastWord . . . . . . . . . . . .	DWord	 0000C5EE _DATA	
+lightBlue  . . . . . . . . . . .	Number	 00000009h   
+lightCyan  . . . . . . . . . . .	Number	 0000000Bh   
+lightGray  . . . . . . . . . . .	Number	 00000007h   
+lightGreen . . . . . . . . . . .	Number	 0000000Ah   
+lightMagenta . . . . . . . . . .	Number	 0000000Dh   
+lightRed . . . . . . . . . . . .	Number	 0000000Ch   
+lineOut  . . . . . . . . . . . .	Byte	 0000C591 _DATA	
+magenta  . . . . . . . . . . . .	Number	 00000005h   
+mainLoopCounter  . . . . . . . .	DWord	 0000C5E1 _DATA	
+new_line . . . . . . . . . . . .	Byte	 0000C5FD _DATA	
+position . . . . . . . . . . . .	DWord	 0000271C _DATA	
+promptAnger  . . . . . . . . . .	Byte	 0000C74C _DATA	
+promptDisgust  . . . . . . . . .	Byte	 0000C78D _DATA	
+promptDisplay  . . . . . . . . .	Byte	 0000C633 _DATA	
+promptEnter  . . . . . . . . . .	Byte	 0000C5FF _DATA	
+promptFear . . . . . . . . . . .	Byte	 0000C7D0 _DATA	
+promptFile1  . . . . . . . . . .	Byte	 0000C644 _DATA	
+promptFile2  . . . . . . . . . .	Byte	 0000C64B _DATA	
+promptHappy  . . . . . . . . . .	Byte	 0000C6CE _DATA	
+promptMixed  . . . . . . . . . .	Byte	 0000C810 _DATA	
+promptNoDot  . . . . . . . . . .	Byte	 0000C671 _DATA	
+promptNone . . . . . . . . . . .	Byte	 0000C850 _DATA	
+promptSad  . . . . . . . . . . .	Byte	 0000C70E _DATA	
+red  . . . . . . . . . . . . . .	Number	 00000004h   
+semiColon  . . . . . . . . . . .	Byte	 0000C5F2 _DATA	
+uword  . . . . . . . . . . . . .	Byte	 0000C5B9 _DATA	
+welcome  . . . . . . . . . . . .	Byte	 0000C8C9 _DATA	
+white  . . . . . . . . . . . . .	Number	 0000000Fh   
+world_len  . . . . . . . . . . .	Byte	 0000C5E5 _DATA	
+wsprintf . . . . . . . . . . . .	Text   	 wsprintfA
+yellow . . . . . . . . . . . . .	Number	 0000000Eh   
+
+	   0 Warnings
+	   0 Errors
